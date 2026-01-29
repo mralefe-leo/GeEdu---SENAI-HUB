@@ -13,10 +13,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CONFIGURAÇÕES DE SEGURANÇA (VIA SECRETS) ---
+# --- CONFIGURAÇÕES DE SEGURANÇA ---
 SHEET_NAME = "DB_GESTAO_EDUCACIONAL" 
 
-# --- DADOS PADRÃO (BACKUP PARA PRIMEIRA CARGA) ---
+# --- DADOS PADRÃO (BACKUP) ---
 DEFAULT_COORDENACAO = [
     {"label": "Ensalamento de Turmas", "link": "https://ensalamento-senai-gyf6eeutqqgmnvbab8zffj.streamlit.app/", "icon": "⏰"},
     {"label": "Cronograma Avaliação", "link": "https://docs.google.com/spreadsheets/d/10dOuco0yMCS201FnidWxq-BWgbNyTUhxxLNfs82H0t8/edit?gid=2119349890#gid=2119349890", "icon": "📊"},
@@ -44,8 +44,8 @@ DEFAULT_CRONOGRAMAS = {
     ],
     "TÉCNICOS NEM": [
         {"label": "ELETROTÉCNICA (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=435143336"},
-        {"label": "TÉC. EM SEGURANÇA (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=868615014"},
-        {"label": "ENERGIA RENOVÁVEL (2024-2026)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=957305393"},
+        {"label": "TÉC. EM SEGURANÇA (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=1859341809#gid=1859341809"},
+        {"label": "ENERGIA RENOVÁVEL (2024-2026)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=1848588354#gid=1848588354"},
         {"label": "BUSCA ATIVA (NEM 2023-2026)", "link": "https://docs.google.com/spreadsheets/d/1IjSLQkJ1s2nNDPgrqeqWPdiK_WGIniA7/edit?gid=703051653#gid=703051653"},
     ],
     "FIC's (SENAI)  ": [
@@ -99,63 +99,57 @@ DEFAULT_TURMAS = {
     "APRENDIZAGEM (2025)": [
         {"label": "GESTÃO INDUSTRIAL 1 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1484510770#gid=1484510770"},
         {"label": "GESTÃO INDUSTRIAL 2 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1398337132#gid=1398337132"},
-        {"label": "GESTÃO INDUSTRIAL 3 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1806022898#gid=1806022898"},
-        {"label": "GESTÃO INDUSTRIAL 4 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=298475697#gid=298475697"},
-        {"label": "GESTÃO INDUSTRIAL 5 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1375636971#gid=1375636971"},
-        {"label": "OPERAÇÕES LOGÍSTICAS 1 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=309880873#gid=309880873"},
-        {"label": "OPERAÇÕES LOGÍSTICAS 2 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1886911715#gid=1886911715"},
-        {"label": "OPERAÇÕES LOGÍSTICAS 3 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=1069851690#gid=1069851690"},
-        {"label": "PROGRAMA DE EDIFICAÇÕES", "link": "https://docs.google.com/spreadsheets/d/1lnLTVwv8dGuo9NGHOHaktLF6HVLW4i9KCsT5ttwhcwk/edit?gid=583575371#gid=583575371"},
+        {"label": "GESTÃO INDUSTRIAL 3 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1806022898#gid=1806022898"},
+        {"label": "GESTÃO INDUSTRIAL 4 - TARDE", "link": "https://docs.google.com/spreadsheets/d/298475697#gid=298475697"},
+        {"label": "GESTÃO INDUSTRIAL 5 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1375636971#gid=1375636971"},
+        {"label": "OPERAÇÕES LOGÍSTICAS 1 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/309880873#gid=309880873"},
+        {"label": "OPERAÇÕES LOGÍSTICAS 2 - MANHÃ", "link": "https://docs.google.com/spreadsheets/d/1886911715#gid=1886911715"},
+        {"label": "OPERAÇÕES LOGÍSTICAS 3 - TARDE", "link": "https://docs.google.com/spreadsheets/d/1069851690#gid=1069851690"},
+        {"label": "PROGRAMA DE EDIFICAÇÕES", "link": "https://docs.google.com/spreadsheets/d/583575371#gid=583575371"},
         {"label": "PROGRAMA DE GESTÃO C - MANHÃ", "link": "#"},
         {"label": "PROGRAMA DE GESTÃO C - TARDE", "link": "#"},
         {"label": "LOGÍSTICA MERCALE - TARDE", "link": "#"},
     ]
 }
 
-# --- GOOGLE SHEETS CONNECTION (CORREÇÃO DE BASE64) ---
+# --- GOOGLE SHEETS CONNECTION (CORREÇÃO DE PADDING/FORMATO) ---
 
 @st.cache_resource
 def get_gspread_client():
-    """Conecta ao Google Sheets usando st.secrets com tratamento robusto de chave"""
-    # Verifica se os segredos existem
+    """Conecta ao Google Sheets usando 'json_content' (raw string) para evitar erros de padding"""
+    
+    # 1. Verifica se a configuração existe
     if "gcp_service_account" not in st.secrets:
-        st.error("Segredos do Google (gcp_service_account) não configurados!")
+        st.error("Segredos não configurados no Streamlit Cloud.")
         return None
-        
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # 1. Copia o dicionário para não alterar o original
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    # 2. VACINA ROBUSTA PARA O ERRO "INCORRECT PADDING"
-    if "private_key" in creds_dict:
-        private_key = creds_dict["private_key"]
-        
-        # Se a chave não começar com o cabeçalho correto, algo está errado na cópia
-        if "-----BEGIN PRIVATE KEY-----" not in private_key:
-            st.error("ERRO CRÍTICO: A 'private_key' nos Secrets está incompleta. Verifique se copiou desde '-----BEGIN...'.")
-            return None
-            
-        # Tratamento de quebras de linha:
-        # Se tiver "\n" literais (duas letras), converte para enter real
-        # Se tiver espaços onde deveria ter enter, tenta corrigir (comum em copy-paste)
-        private_key = private_key.replace("\\n", "\n")
-        
-        # Garante que não há espaços em branco no início ou fim que geram padding error
-        creds_dict["private_key"] = private_key.strip()
-    
+    # 2. Tenta pegar a string JSON bruta
     try:
+        # Se você colou como 'json_content' (método recomendado)
+        if "json_content" in st.secrets["gcp_service_account"]:
+            creds_dict = json.loads(st.secrets["gcp_service_account"]["json_content"], strict=False)
+        else:
+            # Fallback: se você colou campo por campo (antigo método propenso a erro)
+            # Tenta reconstruir, mas é arriscado para 'private_key'
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
+
+    except json.JSONDecodeError:
+        st.error("Erro no formato do JSON nos Secrets. Verifique se copiou o arquivo inteiro corretamente.")
+        return None
     except Exception as e:
-        # Mostra o erro na tela para facilitar o debug (remova em produção se quiser)
         st.error(f"Erro na autenticação do Google: {e}")
         return None
 
 def load_data_from_sheet():
     """Lê os dados da planilha e converte para o formato do app"""
-    # Se não tiver secrets configurados, usa o backup local para não quebrar
+    # Se não tiver secrets configurados, usa o backup local
     if "gcp_service_account" not in st.secrets:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
@@ -196,7 +190,7 @@ def load_data_from_sheet():
                 
         return db
     except Exception as e:
-        # st.error(f"Erro ao conectar na planilha: {e}") # Descomente para debug
+        # st.error(f"Erro ao conectar na planilha: {e}") 
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
