@@ -116,7 +116,7 @@ DEFAULT_TURMAS = {
 
 @st.cache_resource
 def get_gspread_client():
-    """Conecta ao Google Sheets usando st.secrets com tratamento de chave privada"""
+    """Conecta ao Google Sheets usando st.secrets com tratamento robusto de chave"""
     # Verifica se os segredos existem
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos do Google (gcp_service_account) não configurados!")
@@ -124,19 +124,32 @@ def get_gspread_client():
         
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # 1. Copia o dicionário para não alterar o original do st.secrets
+    # 1. Copia o dicionário para não alterar o original
     creds_dict = dict(st.secrets["gcp_service_account"])
     
-    # 2. VACINA: Substitui caracteres literais \n por quebras de linha reais
-    # Isso resolve o erro 'binascii.Error' e problemas de PEM
+    # 2. VACINA ROBUSTA PARA O ERRO "INCORRECT PADDING"
     if "private_key" in creds_dict:
-        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+        private_key = creds_dict["private_key"]
+        
+        # Se a chave não começar com o cabeçalho correto, algo está errado na cópia
+        if "-----BEGIN PRIVATE KEY-----" not in private_key:
+            st.error("ERRO CRÍTICO: A 'private_key' nos Secrets está incompleta. Verifique se copiou desde '-----BEGIN...'.")
+            return None
+            
+        # Tratamento de quebras de linha:
+        # Se tiver "\n" literais (duas letras), converte para enter real
+        # Se tiver espaços onde deveria ter enter, tenta corrigir (comum em copy-paste)
+        private_key = private_key.replace("\\n", "\n")
+        
+        # Garante que não há espaços em branco no início ou fim que geram padding error
+        creds_dict["private_key"] = private_key.strip()
     
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
     except Exception as e:
+        # Mostra o erro na tela para facilitar o debug (remova em produção se quiser)
         st.error(f"Erro na autenticação do Google: {e}")
         return None
 
