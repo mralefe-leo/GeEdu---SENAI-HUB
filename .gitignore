@@ -1,0 +1,6 @@
+# Ignorar credenciais e arquivos de sistema
+credentials.json
+dados_sistema.json
+.streamlit/secrets.toml
+__pycache__/
+*.pyc
