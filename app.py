@@ -54,7 +54,7 @@ DEFAULT_CRONOGRAMAS = {
         {"label": "Busca Ativa (2025)", "link": "#"}, 
     ],
     "Técnicos SENAI": [
-        {"label": "TÉC. EM SEGURANÇA - EAD (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/1vX35JOwsYnmFEOacJNPijK3q1OLfXiZ6/edit?gid=1925712139#gid=1925712139"},
+        {"label": "TÉC. EM SEGURANÇA - EAD (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/1kyoLq4OjsAfvLVNHeKb7ZmsU2XYg6nrG/edit?gid=1925712139#gid=1925712139"},
         {"label": "TÉC. ELETROTÉCNICA (2025-2027)", "link": "https://docs.google.com/spreadsheets/d/1vX35JOwsYnmFEOacJNPijK3q1OLfXiZ6/edit?gid=624513768#gid=624513768"},
     ],
     "Aprendizagem": [
@@ -112,25 +112,20 @@ DEFAULT_TURMAS = {
     ]
 }
 
-# --- GOOGLE SHEETS CONNECTION (CORREÇÃO DE PADDING/FORMATO) ---
+# --- GOOGLE SHEETS CONNECTION ---
 
 @st.cache_resource
 def get_gspread_client():
     """Conecta ao Google Sheets usando 'json_content' (raw string) para evitar erros de padding"""
     
-    # 1. Verifica se a configuração existe
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos não configurados no Streamlit Cloud.")
         return None
     
-    # 2. Tenta pegar a string JSON bruta
     try:
-        # Se você colou como 'json_content' (método recomendado)
         if "json_content" in st.secrets["gcp_service_account"]:
             creds_dict = json.loads(st.secrets["gcp_service_account"]["json_content"], strict=False)
         else:
-            # Fallback: se você colou campo por campo (antigo método propenso a erro)
-            # Tenta reconstruir, mas é arriscado para 'private_key'
             creds_dict = dict(st.secrets["gcp_service_account"])
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
@@ -148,8 +143,7 @@ def get_gspread_client():
         return None
 
 def load_data_from_sheet():
-    """Lê os dados da planilha e converte para o formato do app"""
-    # Se não tiver secrets configurados, usa o backup local
+    """Lê os dados da planilha e converte para o formato do app, ignorando placeholders"""
     if "gcp_service_account" not in st.secrets:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
@@ -161,7 +155,6 @@ def load_data_from_sheet():
         sheet = client.open(SHEET_NAME).sheet1
         records = sheet.get_all_records()
         
-        # Se planilha vazia, faz carga inicial
         if not records:
             save_data_to_sheet({
                 "coordenacao": DEFAULT_COORDENACAO,
@@ -170,10 +163,18 @@ def load_data_from_sheet():
             })
             return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
-        # Reconstrói a estrutura
         db = {"coordenacao": [], "cronogramas": {}, "turmas": {}}
         
         for row in records:
+            # IGNORA O PLACEHOLDER PARA VISUALIZAÇÃO, MAS CRIA A CHAVE NO DICIONÁRIO
+            if row["LABEL"] == "__EMPTY__":
+                cat = row["CATEGORIA"]
+                if row["ABA"] == "Cronogramas":
+                    if cat not in db["cronogramas"]: db["cronogramas"][cat] = []
+                elif row["ABA"] == "Gestão de Turmas":
+                    if cat not in db["turmas"]: db["turmas"][cat] = []
+                continue # Pula para o próximo loop
+
             item = {"label": row["LABEL"], "link": row["LINK"]}
             if row["ICONE"]: item["icon"] = row["ICONE"]
             
@@ -190,37 +191,38 @@ def load_data_from_sheet():
                 
         return db
     except Exception as e:
-        # st.error(f"Erro ao conectar na planilha: {e}") 
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
-    """Limpa a planilha e reescreve tudo"""
+    """Limpa a planilha e reescreve tudo, criando placeholders para categorias vazias"""
     client = get_gspread_client()
     if not client:
         return
     
     sheet = client.open(SHEET_NAME).sheet1
     
-    # Prepara as linhas para salvar
     rows = []
-    # Cabeçalho
     rows.append(["ABA", "CATEGORIA", "LABEL", "LINK", "ICONE"])
     
-    # Processa Coordenação
     for item in data["coordenacao"]:
         rows.append(["Coordenação", "Geral", item["label"], item["link"], item.get("icon", "")])
         
-    # Processa Cronogramas
     for cat, items in data["cronogramas"].items():
-        for item in items:
-            rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
+        if not items:
+            # SE CATEGORIA ESTIVER VAZIA, CRIA LINHA FANTASMA PARA ELA EXISTIR NO DB
+            rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
+        else:
+            for item in items:
+                rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
             
-    # Processa Turmas
     for cat, items in data["turmas"].items():
-        for item in items:
-            rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
+        if not items:
+            # SE CATEGORIA ESTIVER VAZIA, CRIA LINHA FANTASMA PARA ELA EXISTIR NO DB
+            rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
+        else:
+            for item in items:
+                rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
             
-    # Atualiza a planilha
     sheet.clear()
     sheet.update(rows)
 
@@ -280,16 +282,13 @@ def render_cards_grid(item_list, cols=2):
 def admin_sidebar():
     st.sidebar.header("🔒 Área da Coordenação")
     
-    # Verifica se os segredos existem antes de mostrar login
     if "admin_password" not in st.secrets:
-        # Se estiver rodando local sem secrets.toml configurado
         if "gcp_service_account" not in st.secrets:
              st.sidebar.info("Modo Leitura (Secrets não configurados)")
         return
 
     password = st.sidebar.text_input("Senha de Acesso", type="password")
     
-    # Validação da senha segura
     if password == st.secrets["admin_password"]:
         st.sidebar.success("Conectado ao Banco de Dados")
         st.sidebar.markdown("---")
