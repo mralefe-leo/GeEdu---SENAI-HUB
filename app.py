@@ -14,7 +14,6 @@ st.set_page_config(
 )
 
 # --- CONFIGURAÇÕES DE SEGURANÇA (VIA SECRETS) ---
-# As senhas e arquivos agora são lidos de st.secrets e não do código.
 SHEET_NAME = "DB_GESTAO_EDUCACIONAL" 
 
 # --- DADOS PADRÃO (BACKUP PARA PRIMEIRA CARGA) ---
@@ -55,7 +54,7 @@ DEFAULT_CRONOGRAMAS = {
         {"label": "Busca Ativa (2025)", "link": "#"}, 
     ],
     "Técnicos SENAI": [
-        {"label": "TÉC. EM SEGURANÇA - EAD (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/1kyoLq4OjsAfvLVNHeKb7ZmsU2XYg6nrG/edit?gid=307972768#gid=307972768"},
+        {"label": "TÉC. EM SEGURANÇA - EAD (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/1vX35JOwsYnmFEOacJNPijK3q1OLfXiZ6/edit?gid=1925712139#gid=1925712139"},
         {"label": "TÉC. ELETROTÉCNICA (2025-2027)", "link": "https://docs.google.com/spreadsheets/d/1vX35JOwsYnmFEOacJNPijK3q1OLfXiZ6/edit?gid=624513768#gid=624513768"},
     ],
     "Aprendizagem": [
@@ -78,13 +77,13 @@ DEFAULT_TURMAS = {
     ],
     "FIC'S (NEM) 2025": [
         {"label": "TRILHA LOGÍSTICA - 1 MANHÃ (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=389234120#gid=389234120"},
-        {"label": "TRILHA LOGÍSTICA - 2 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=1029141777#gid=1029141777"},
-        {"label": "TRILHA LOGÍSTICA - 3 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=603235616#gid=603235616"},
-        {"label": "TRILHA LOGÍSTICA - 4 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=417445561#gid=417445561"},
-        {"label": "TRILHA LOGÍSTICA - 5 MANHÃ (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=155259147#gid=155259147"},
-        {"label": "TRILHA LOGÍSTICA - 6 TARDE (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=924723208#gid=924723208"},
+        {"label": "TRILHA LOGÍSTICA - 2 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/1029141777#gid=1029141777"},
+        {"label": "TRILHA LOGÍSTICA - 3 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/603235616#gid=603235616"},
+        {"label": "TRILHA LOGÍSTICA - 4 TARDE (1º ANO)", "link": "https://docs.google.com/spreadsheets/d/417445561#gid=417445561"},
+        {"label": "TRILHA LOGÍSTICA - 5 MANHÃ (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/155259147#gid=155259147"},
+        {"label": "TRILHA LOGÍSTICA - 6 TARDE (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/924723208#gid=924723208"},
         {"label": "TRILHA LOGÍSTICA - 7 TARDE (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/1285656207#gid=1285656207"},
-        {"label": "TRILHA ENERGIAS - MANHÃ (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/1SiCncHnELxcCs2X5OKKVmhvDnlAgWxyLlF7lBB7dRAM/edit?gid=1622990027#gid=1622990027"},
+        {"label": "TRILHA ENERGIAS - MANHÃ (2º ANO)", "link": "https://docs.google.com/spreadsheets/d/1622990027#gid=1622990027"},
     ],
     "TÉCNICOS NEM": [
         {"label": "TÉCNICO EM ELETROTÉCNICA (2023-2025)", "link": "https://docs.google.com/spreadsheets/d/15xyt51ttXsHLMRctXAWgYlzdCAJEa39s/edit#gid=435143336"},
@@ -113,11 +112,11 @@ DEFAULT_TURMAS = {
     ]
 }
 
-# --- GOOGLE SHEETS CONNECTION ---
+# --- GOOGLE SHEETS CONNECTION (CORREÇÃO DE BASE64) ---
 
 @st.cache_resource
 def get_gspread_client():
-    """Conecta ao Google Sheets usando st.secrets"""
+    """Conecta ao Google Sheets usando st.secrets com tratamento de chave privada"""
     # Verifica se os segredos existem
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos do Google (gcp_service_account) não configurados!")
@@ -125,11 +124,21 @@ def get_gspread_client():
         
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Em vez de ler arquivo, lê do dicionário de segredos
-    creds_dict = st.secrets["gcp_service_account"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    client = gspread.authorize(creds)
-    return client
+    # 1. Copia o dicionário para não alterar o original do st.secrets
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    
+    # 2. VACINA: Substitui caracteres literais \n por quebras de linha reais
+    # Isso resolve o erro 'binascii.Error' e problemas de PEM
+    if "private_key" in creds_dict:
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        st.error(f"Erro na autenticação do Google: {e}")
+        return None
 
 def load_data_from_sheet():
     """Lê os dados da planilha e converte para o formato do app"""
@@ -369,6 +378,7 @@ def main():
                     st.markdown("<br>", unsafe_allow_html=True)
 
     with tab3:
+        # Mesma lógica do Tab 2 para Turmas
         s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
