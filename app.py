@@ -116,7 +116,7 @@ DEFAULT_TURMAS = {
 
 @st.cache_resource
 def get_gspread_client():
-    """Conecta ao Google Sheets usando 'json_content' (raw string) para evitar erros de padding"""
+    
     
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos não configurados no Streamlit Cloud.")
@@ -143,7 +143,7 @@ def get_gspread_client():
         return None
 
 def load_data_from_sheet():
-    """Lê os dados da planilha e converte para o formato do app, ignorando placeholders"""
+    
     if "gcp_service_account" not in st.secrets:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
@@ -166,14 +166,14 @@ def load_data_from_sheet():
         db = {"coordenacao": [], "cronogramas": {}, "turmas": {}}
         
         for row in records:
-            # IGNORA O PLACEHOLDER PARA VISUALIZAÇÃO, MAS CRIA A CHAVE NO DICIONÁRIO
+            
             if row["LABEL"] == "__EMPTY__":
                 cat = row["CATEGORIA"]
                 if row["ABA"] == "Cronogramas":
                     if cat not in db["cronogramas"]: db["cronogramas"][cat] = []
                 elif row["ABA"] == "Gestão de Turmas":
                     if cat not in db["turmas"]: db["turmas"][cat] = []
-                continue # Pula para o próximo loop
+                continue 
 
             item = {"label": row["LABEL"], "link": row["LINK"]}
             if row["ICONE"]: item["icon"] = row["ICONE"]
@@ -194,7 +194,7 @@ def load_data_from_sheet():
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
-    """Limpa a planilha e reescreve tudo, criando placeholders para categorias vazias"""
+    
     client = get_gspread_client()
     if not client:
         return
@@ -209,7 +209,7 @@ def save_data_to_sheet(data):
         
     for cat, items in data["cronogramas"].items():
         if not items:
-            # SE CATEGORIA ESTIVER VAZIA, CRIA LINHA FANTASMA PARA ELA EXISTIR NO DB
+            
             rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
@@ -217,7 +217,7 @@ def save_data_to_sheet(data):
             
     for cat, items in data["turmas"].items():
         if not items:
-            # SE CATEGORIA ESTIVER VAZIA, CRIA LINHA FANTASMA PARA ELA EXISTIR NO DB
+            
             rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
@@ -278,7 +278,7 @@ def render_cards_grid(item_list, cols=2):
             with columns[index]:
                 st.link_button(label=f"{item.get('icon', '➡️')}  {item['label']}", url=item['link'], use_container_width=True)
 
-# --- PAINEL ADMIN (SENHA VIA SECRETS) ---
+# --- PAINEL ADMIN ---
 def admin_sidebar():
     st.sidebar.header("🔒 Área da Coordenação")
     
@@ -384,7 +384,7 @@ def main():
                     st.markdown("<br>", unsafe_allow_html=True)
 
     with tab3:
-        # Mesma lógica do Tab 2 para Turmas
+        
         s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
