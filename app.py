@@ -349,7 +349,7 @@ def render_cards_grid(item_list, cols=2):
 # --- PAINEL ADMIN (SIDEBAR) ---
 def admin_sidebar():
     # --- BOTÃO DE TEMA (VISÍVEL PARA TODOS NA SIDEBAR) ---
-    st.sidebar.markdown("### 🎨 Aparência")
+    st.sidebar.markdown("### Aparência")
     if st.sidebar.button("🌓 Mudar Tema (Claro/Escuro)", use_container_width=True):
         toggle_theme()
         st.rerun()
