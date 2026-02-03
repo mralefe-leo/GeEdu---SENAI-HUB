@@ -13,6 +13,43 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# --- CONTROLE DE TEMA (DARK/LIGHT MODE) ---
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'light'
+
+def toggle_theme():
+    if st.session_state.theme == 'light':
+        st.session_state.theme = 'dark'
+    else:
+        st.session_state.theme = 'light'
+
+# Definição das Paletas de Cores
+themes = {
+    "light": {
+        "bg_color": "#ffffff",
+        "text_color": "#333333",
+        "card_bg": "#ffffff",
+        "card_border": "#e6e6e6",
+        "card_shadow": "rgba(0,0,0,0.05)",
+        "hover_bg": "#f0f7ff",
+        "title_color": "#0046ad",
+        "tab_text": "#555555"
+    },
+    "dark": {
+        "bg_color": "#0e1117", # Cor padrão dark do Streamlit
+        "text_color": "#f0f2f6", # Branco suave
+        "card_bg": "#262730", # Cinza escuro (padrão cards streamlit)
+        "card_border": "#41444d",
+        "card_shadow": "rgba(0,0,0,0.3)",
+        "hover_bg": "#1e2129",
+        "title_color": "#6aa1ff", # Azul mais claro para contraste no preto
+        "tab_text": "#dadada"
+    }
+}
+
+# Seleciona as cores baseadas no estado atual
+current_theme = themes[st.session_state.theme]
+
 # --- CONFIGURAÇÕES DE SEGURANÇA ---
 SHEET_NAME = "DB_GESTAO_EDUCACIONAL" 
 
@@ -116,12 +153,9 @@ DEFAULT_TURMAS = {
 
 @st.cache_resource
 def get_gspread_client():
-    
-    
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos não configurados no Streamlit Cloud.")
         return None
-    
     try:
         if "json_content" in st.secrets["gcp_service_account"]:
             creds_dict = json.loads(st.secrets["gcp_service_account"]["json_content"], strict=False)
@@ -129,32 +163,26 @@ def get_gspread_client():
             creds_dict = dict(st.secrets["gcp_service_account"])
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
-
     except json.JSONDecodeError:
-        st.error("Erro no formato do JSON nos Secrets. Verifique se copiou o arquivo inteiro corretamente.")
+        st.error("Erro no formato do JSON nos Secrets.")
         return None
     except Exception as e:
         st.error(f"Erro na autenticação do Google: {e}")
         return None
 
 def load_data_from_sheet():
-    
     if "gcp_service_account" not in st.secrets:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
-
     client = get_gspread_client()
     if not client:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
-    
     try:
         sheet = client.open(SHEET_NAME).sheet1
         records = sheet.get_all_records()
-        
         if not records:
             save_data_to_sheet({
                 "coordenacao": DEFAULT_COORDENACAO,
@@ -162,22 +190,17 @@ def load_data_from_sheet():
                 "turmas": DEFAULT_TURMAS
             })
             return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
-
         db = {"coordenacao": [], "cronogramas": {}, "turmas": {}}
-        
         for row in records:
-            
             if row["LABEL"] == "__EMPTY__":
                 cat = row["CATEGORIA"]
                 if row["ABA"] == "Cronogramas":
                     if cat not in db["cronogramas"]: db["cronogramas"][cat] = []
                 elif row["ABA"] == "Gestão de Turmas":
                     if cat not in db["turmas"]: db["turmas"][cat] = []
-                continue 
-
+                continue
             item = {"label": row["LABEL"], "link": row["LINK"]}
             if row["ICONE"]: item["icon"] = row["ICONE"]
-            
             if row["ABA"] == "Coordenação":
                 db["coordenacao"].append(item)
             elif row["ABA"] == "Cronogramas":
@@ -188,70 +211,99 @@ def load_data_from_sheet():
                 cat = row["CATEGORIA"]
                 if cat not in db["turmas"]: db["turmas"][cat] = []
                 db["turmas"][cat].append(item)
-                
         return db
     except Exception as e:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
-    
     client = get_gspread_client()
-    if not client:
-        return
-    
+    if not client: return
     sheet = client.open(SHEET_NAME).sheet1
-    
     rows = []
     rows.append(["ABA", "CATEGORIA", "LABEL", "LINK", "ICONE"])
-    
     for item in data["coordenacao"]:
         rows.append(["Coordenação", "Geral", item["label"], item["link"], item.get("icon", "")])
-        
     for cat, items in data["cronogramas"].items():
         if not items:
-            
             rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
                 rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
-            
     for cat, items in data["turmas"].items():
         if not items:
-            
             rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
                 rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
-            
     sheet.clear()
     sheet.update(rows)
 
-# --- ESTILIZAÇÃO ---
-st.markdown("""
+# --- ESTILIZAÇÃO CSS DINÂMICA (DARK/LIGHT) ---
+st.markdown(f"""
     <style>
-    .main-header { text-align: center; margin-bottom: 1.5rem; }
-    .main-header h1 { color: #0046ad; font-weight: 800; font-size: 2.2rem; margin: 0; text-transform: uppercase; }
+    /* Força a cor de fundo global do app */
+    .stApp {{
+        background-color: {current_theme['bg_color']};
+    }}
     
-    button[data-baseweb="tab"] { padding: 0.5rem 1rem !important; flex: 1; }
-    .stTabs [data-baseweb="tab"] p { font-size: 20px !important; font-weight: 700 !important; }
-    button[data-baseweb="tab"][aria-selected="true"] { color: #0046ad !important; border-bottom-color: #0046ad !important; background-color: #f8f9fa; }
+    .main-header {{ text-align: center; margin-bottom: 1.5rem; }}
+    .main-header h1 {{ 
+        color: {current_theme['title_color']}; 
+        font-weight: 800; font-size: 2.2rem; margin: 0; text-transform: uppercase; 
+    }}
+    
+    /* ABAS */
+    button[data-baseweb="tab"] {{ padding: 0.5rem 1rem !important; flex: 1; }}
+    .stTabs [data-baseweb="tab"] p {{ 
+        font-size: 20px !important; font-weight: 700 !important; color: {current_theme['tab_text']} !important;
+    }}
+    button[data-baseweb="tab"][aria-selected="true"] {{ 
+        color: {current_theme['title_color']} !important; 
+        border-bottom-color: {current_theme['title_color']} !important; 
+        background-color: {current_theme['hover_bg']}; 
+    }}
 
-    div[data-testid="stLinkButton"] > a {
+    /* BOTÕES (CARDS) COM CORES DINÂMICAS */
+    div[data-testid="stLinkButton"] > a {{
         width: 100% !important; border-radius: 8px; min-height: 3.2em !important; height: auto !important; 
-        border: 1px solid #e6e6e6; box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: #333333 !important;
+        border: 1px solid {current_theme['card_border']}; 
+        box-shadow: 0 1px 2px {current_theme['card_shadow']}; 
+        background-color: {current_theme['card_bg']};
+        color: {current_theme['text_color']} !important;
         text-decoration: none !important; transition: all 0.2s ease-in-out;
         display: flex !important; align-items: center !important; justify-content: flex-start !important;
         padding: 0.4rem 12px !important; font-size: 13.5px !important; line-height: 1.25 !important; white-space: normal !important;
-    }
-    div[data-testid="stLinkButton"] > a > div { justify-content: flex-start !important; text-align: left !important; width: 100%; }
-    div[data-testid="stLinkButton"] > a:hover { border-color: #0046ad; background-color: #f0f7ff; transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,70,173,0.15); color: #0046ad !important; }
+    }}
     
-    .category-title { color: #0046ad; font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #f0f2f6; padding-bottom: 4px; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .block-container { padding-top: 1.5rem; }
+    /* Garante que elementos internos herdem a cor */
+    div[data-testid="stLinkButton"] > a > div {{ 
+        justify-content: flex-start !important; text-align: left !important; width: 100%;
+        color: {current_theme['text_color']} !important;
+    }}
     
-    .logo-wrapper { display: flex; justify-content: center; margin-bottom: 0.5rem; }
-    .logo-wrapper img { max-width: 260px; width: 100%; height: auto; object-fit: contain; }
-    @media (max-width: 768px) { .logo-wrapper img { max-width: 180px; } }
+    /* HOVER */
+    div[data-testid="stLinkButton"] > a:hover {{ 
+        border-color: {current_theme['title_color']}; 
+        background-color: {current_theme['hover_bg']}; 
+        transform: translateY(-1px); 
+        color: {current_theme['title_color']} !important; 
+    }}
+    div[data-testid="stLinkButton"] > a:hover > div {{
+        color: {current_theme['title_color']} !important;
+    }}
+    
+    /* TÍTULOS DE CATEGORIA */
+    .category-title {{ 
+        color: {current_theme['title_color']}; 
+        font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; 
+        border-bottom: 1px solid {current_theme['card_border']}; 
+        padding-bottom: 4px; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; 
+    }}
+    .block-container {{ padding-top: 1.5rem; }}
+    
+    .logo-wrapper {{ display: flex; justify-content: center; margin-bottom: 0.5rem; }}
+    .logo-wrapper img {{ max-width: 260px; width: 100%; height: auto; object-fit: contain; }}
+    @media (max-width: 768px) {{ .logo-wrapper img {{ max-width: 180px; }} }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -267,8 +319,8 @@ def render_header():
                 img_base64 = base64.b64encode(img_file.read()).decode()
             st.markdown(f"""<div class="logo-wrapper"><img src="data:image/png;base64,{img_base64}"></div>""", unsafe_allow_html=True)
         else:
-            st.markdown("<h2 style='text-align: center; color: gray;'>[LOGO.PNG]</h2>", unsafe_allow_html=True)
-        st.markdown("""<div class="main-header"><h1>Gestão Educacional</h1></div>""", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: {current_theme['text_color']};'>[LOGO.PNG]</h2>", unsafe_allow_html=True)
+        st.markdown(f"""<div class="main-header"><h1>Gestão Educacional</h1></div>""", unsafe_allow_html=True)
 
 def render_cards_grid(item_list, cols=2):
     for i in range(0, len(item_list), cols):
@@ -278,8 +330,15 @@ def render_cards_grid(item_list, cols=2):
             with columns[index]:
                 st.link_button(label=f"{item.get('icon', '➡️')}  {item['label']}", url=item['link'], use_container_width=True)
 
-# --- PAINEL ADMIN ---
+# --- PAINEL ADMIN (SIDEBAR) ---
 def admin_sidebar():
+    # Botão de Tema no topo da sidebar
+    st.sidebar.markdown("### 🎨 Aparência")
+    if st.sidebar.button("🌓 Alternar Tema Claro/Escuro", use_container_width=True):
+        toggle_theme()
+        st.rerun()
+    st.sidebar.markdown("---")
+
     st.sidebar.header("🔒 Área da Coordenação")
     
     if "admin_password" not in st.secrets:
@@ -384,7 +443,6 @@ def main():
                     st.markdown("<br>", unsafe_allow_html=True)
 
     with tab3:
-        
         s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -407,7 +465,7 @@ def main():
                     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("<div style='text-align: center; color: gray; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; color: {current_theme['tab_text']}; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
