@@ -23,32 +23,30 @@ def toggle_theme():
     else:
         st.session_state.theme = 'light'
 
-# Definição das Paletas de Cores
+# Definição das Cores para cada Tema
 themes = {
     "light": {
         "bg_color": "#ffffff",
-        "text_color": "#333333",
+        "text_color": "#333333", # Texto escuro para fundo claro
         "card_bg": "#ffffff",
         "card_border": "#e6e6e6",
-        "card_shadow": "rgba(0,0,0,0.05)",
         "hover_bg": "#f0f7ff",
         "title_color": "#0046ad",
-        "tab_text": "#555555"
+        "shadow": "rgba(0,0,0,0.05)"
     },
     "dark": {
-        "bg_color": "#0e1117", # Cor padrão dark do Streamlit
-        "text_color": "#f0f2f6", # Branco suave
-        "card_bg": "#262730", # Cinza escuro (padrão cards streamlit)
+        "bg_color": "#0e1117",
+        "text_color": "#ffffff", # Texto branco para fundo escuro (CORREÇÃO AQUI)
+        "card_bg": "#262730",
         "card_border": "#41444d",
-        "card_shadow": "rgba(0,0,0,0.3)",
-        "hover_bg": "#1e2129",
-        "title_color": "#6aa1ff", # Azul mais claro para contraste no preto
-        "tab_text": "#dadada"
+        "hover_bg": "#363945",
+        "title_color": "#6aa1ff",
+        "shadow": "rgba(0,0,0,0.5)"
     }
 }
 
-# Seleciona as cores baseadas no estado atual
-current_theme = themes[st.session_state.theme]
+# Pega as cores do tema atual
+current = themes[st.session_state.theme]
 
 # --- CONFIGURAÇÕES DE SEGURANÇA ---
 SHEET_NAME = "DB_GESTAO_EDUCACIONAL" 
@@ -156,6 +154,7 @@ def get_gspread_client():
     if "gcp_service_account" not in st.secrets:
         st.error("Segredos não configurados no Streamlit Cloud.")
         return None
+    
     try:
         if "json_content" in st.secrets["gcp_service_account"]:
             creds_dict = json.loads(st.secrets["gcp_service_account"]["json_content"], strict=False)
@@ -163,12 +162,14 @@ def get_gspread_client():
             creds_dict = dict(st.secrets["gcp_service_account"])
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
+
     except json.JSONDecodeError:
-        st.error("Erro no formato do JSON nos Secrets.")
+        st.error("Erro no formato do JSON nos Secrets. Verifique se copiou o arquivo inteiro corretamente.")
         return None
     except Exception as e:
         st.error(f"Erro na autenticação do Google: {e}")
@@ -177,12 +178,15 @@ def get_gspread_client():
 def load_data_from_sheet():
     if "gcp_service_account" not in st.secrets:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
+
     client = get_gspread_client()
     if not client:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
+    
     try:
         sheet = client.open(SHEET_NAME).sheet1
         records = sheet.get_all_records()
+        
         if not records:
             save_data_to_sheet({
                 "coordenacao": DEFAULT_COORDENACAO,
@@ -190,7 +194,9 @@ def load_data_from_sheet():
                 "turmas": DEFAULT_TURMAS
             })
             return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
+
         db = {"coordenacao": [], "cronogramas": {}, "turmas": {}}
+        
         for row in records:
             if row["LABEL"] == "__EMPTY__":
                 cat = row["CATEGORIA"]
@@ -199,8 +205,10 @@ def load_data_from_sheet():
                 elif row["ABA"] == "Gestão de Turmas":
                     if cat not in db["turmas"]: db["turmas"][cat] = []
                 continue
+
             item = {"label": row["LABEL"], "link": row["LINK"]}
             if row["ICONE"]: item["icon"] = row["ICONE"]
+            
             if row["ABA"] == "Coordenação":
                 db["coordenacao"].append(item)
             elif row["ABA"] == "Cronogramas":
@@ -211,92 +219,100 @@ def load_data_from_sheet():
                 cat = row["CATEGORIA"]
                 if cat not in db["turmas"]: db["turmas"][cat] = []
                 db["turmas"][cat].append(item)
+                
         return db
     except Exception as e:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
     client = get_gspread_client()
-    if not client: return
+    if not client:
+        return
+    
     sheet = client.open(SHEET_NAME).sheet1
+    
     rows = []
     rows.append(["ABA", "CATEGORIA", "LABEL", "LINK", "ICONE"])
+    
     for item in data["coordenacao"]:
         rows.append(["Coordenação", "Geral", item["label"], item["link"], item.get("icon", "")])
+        
     for cat, items in data["cronogramas"].items():
         if not items:
             rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
                 rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
+            
     for cat, items in data["turmas"].items():
         if not items:
             rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
         else:
             for item in items:
                 rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
+            
     sheet.clear()
     sheet.update(rows)
 
 # --- ESTILIZAÇÃO CSS DINÂMICA (DARK/LIGHT) ---
 st.markdown(f"""
     <style>
-    /* Força a cor de fundo global do app */
+    /* Aplica a cor de fundo global */
     .stApp {{
-        background-color: {current_theme['bg_color']};
+        background-color: {current['bg_color']};
     }}
     
     .main-header {{ text-align: center; margin-bottom: 1.5rem; }}
     .main-header h1 {{ 
-        color: {current_theme['title_color']}; 
+        color: {current['title_color']}; 
         font-weight: 800; font-size: 2.2rem; margin: 0; text-transform: uppercase; 
     }}
     
     /* ABAS */
     button[data-baseweb="tab"] {{ padding: 0.5rem 1rem !important; flex: 1; }}
     .stTabs [data-baseweb="tab"] p {{ 
-        font-size: 20px !important; font-weight: 700 !important; color: {current_theme['tab_text']} !important;
+        font-size: 20px !important; font-weight: 700 !important;
+        color: {current['text_color']} !important; 
     }}
     button[data-baseweb="tab"][aria-selected="true"] {{ 
-        color: {current_theme['title_color']} !important; 
-        border-bottom-color: {current_theme['title_color']} !important; 
-        background-color: {current_theme['hover_bg']}; 
+        color: {current['title_color']} !important; 
+        border-bottom-color: {current['title_color']} !important; 
+        background-color: {current['hover_bg']}; 
     }}
 
-    /* BOTÕES (CARDS) COM CORES DINÂMICAS */
+    /* BOTÕES: COR DO TEXTO E FUNDO DINÂMICOS */
     div[data-testid="stLinkButton"] > a {{
         width: 100% !important; border-radius: 8px; min-height: 3.2em !important; height: auto !important; 
-        border: 1px solid {current_theme['card_border']}; 
-        box-shadow: 0 1px 2px {current_theme['card_shadow']}; 
-        background-color: {current_theme['card_bg']};
-        color: {current_theme['text_color']} !important;
+        border: 1px solid {current['card_border']}; 
+        box-shadow: 0 1px 2px {current['shadow']}; 
+        background-color: {current['card_bg']};
+        color: {current['text_color']} !important; /* <--- AQUI ESTAVA O PROBLEMA ANTES */
         text-decoration: none !important; transition: all 0.2s ease-in-out;
         display: flex !important; align-items: center !important; justify-content: flex-start !important;
         padding: 0.4rem 12px !important; font-size: 13.5px !important; line-height: 1.25 !important; white-space: normal !important;
     }}
     
-    /* Garante que elementos internos herdem a cor */
     div[data-testid="stLinkButton"] > a > div {{ 
         justify-content: flex-start !important; text-align: left !important; width: 100%;
-        color: {current_theme['text_color']} !important;
+        color: {current['text_color']} !important; /* Garante cor no elemento interno */
     }}
     
-    /* HOVER */
     div[data-testid="stLinkButton"] > a:hover {{ 
-        border-color: {current_theme['title_color']}; 
-        background-color: {current_theme['hover_bg']}; 
+        border-color: {current['title_color']}; 
+        background-color: {current['hover_bg']}; 
         transform: translateY(-1px); 
-        color: {current_theme['title_color']} !important; 
+        color: {current['title_color']} !important; 
     }}
+    
     div[data-testid="stLinkButton"] > a:hover > div {{
-        color: {current_theme['title_color']} !important;
+        color: {current['title_color']} !important;
     }}
     
     /* TÍTULOS DE CATEGORIA */
     .category-title {{ 
-        color: {current_theme['title_color']}; 
+        color: {current['title_color']}; 
         font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; 
-        border-bottom: 1px solid {current_theme['card_border']}; 
+        border-bottom: 1px solid {current['card_border']}; 
         padding-bottom: 4px; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; 
     }}
     .block-container {{ padding-top: 1.5rem; }}
@@ -319,8 +335,8 @@ def render_header():
                 img_base64 = base64.b64encode(img_file.read()).decode()
             st.markdown(f"""<div class="logo-wrapper"><img src="data:image/png;base64,{img_base64}"></div>""", unsafe_allow_html=True)
         else:
-            st.markdown(f"<h2 style='text-align: center; color: {current_theme['text_color']};'>[LOGO.PNG]</h2>", unsafe_allow_html=True)
-        st.markdown(f"""<div class="main-header"><h1>Gestão Educacional</h1></div>""", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: {current['text_color']};'>[LOGO.PNG]</h2>", unsafe_allow_html=True)
+        st.markdown("""<div class="main-header"><h1>Gestão Educacional</h1></div>""", unsafe_allow_html=True)
 
 def render_cards_grid(item_list, cols=2):
     for i in range(0, len(item_list), cols):
@@ -332,13 +348,14 @@ def render_cards_grid(item_list, cols=2):
 
 # --- PAINEL ADMIN (SIDEBAR) ---
 def admin_sidebar():
-    # Botão de Tema no topo da sidebar
+    # --- BOTÃO DE TEMA (VISÍVEL PARA TODOS NA SIDEBAR) ---
     st.sidebar.markdown("### 🎨 Aparência")
-    if st.sidebar.button("🌓 Alternar Tema Claro/Escuro", use_container_width=True):
+    if st.sidebar.button("🌓 Mudar Tema (Claro/Escuro)", use_container_width=True):
         toggle_theme()
         st.rerun()
     st.sidebar.markdown("---")
 
+    # --- LOGIN ---
     st.sidebar.header("🔒 Área da Coordenação")
     
     if "admin_password" not in st.secrets:
@@ -409,6 +426,7 @@ def admin_sidebar():
 
 # --- MAIN ---
 def main():
+    # Agora o botão de tema está na função da sidebar
     admin_sidebar()
     render_header()
     
@@ -465,7 +483,7 @@ def main():
                     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown(f"<div style='text-align: center; color: {current_theme['tab_text']}; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: gray; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
