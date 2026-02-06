@@ -23,11 +23,11 @@ def toggle_theme():
     else:
         st.session_state.theme = 'light'
 
-# Definição das Cores para cada Tema
+# Definição das Cores
 themes = {
     "light": {
         "bg_color": "#ffffff",
-        "text_color": "#333333", # Texto escuro para fundo claro
+        "text_color": "#333333", 
         "card_bg": "#ffffff",
         "card_border": "#e6e6e6",
         "hover_bg": "#f0f7ff",
@@ -36,7 +36,7 @@ themes = {
     },
     "dark": {
         "bg_color": "#0e1117",
-        "text_color": "#ffffff", # Texto branco para fundo escuro (CORREÇÃO AQUI)
+        "text_color": "#ffffff", 
         "card_bg": "#262730",
         "card_border": "#41444d",
         "hover_bg": "#363945",
@@ -45,7 +45,6 @@ themes = {
     }
 }
 
-# Pega as cores do tema atual
 current = themes[st.session_state.theme]
 
 # --- CONFIGURAÇÕES DE SEGURANÇA ---
@@ -148,12 +147,10 @@ DEFAULT_TURMAS = {
 }
 
 # --- GOOGLE SHEETS CONNECTION ---
-
 @st.cache_resource
 def get_gspread_client():
     if "gcp_service_account" not in st.secrets:
-        st.error("Segredos não configurados no Streamlit Cloud.")
-        return None
+        return None 
     
     try:
         if "json_content" in st.secrets["gcp_service_account"]:
@@ -167,18 +164,10 @@ def get_gspread_client():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
-
-    except json.JSONDecodeError:
-        st.error("Erro no formato do JSON nos Secrets. Verifique se copiou o arquivo inteiro corretamente.")
-        return None
-    except Exception as e:
-        st.error(f"Erro na autenticação do Google: {e}")
+    except:
         return None
 
 def load_data_from_sheet():
-    if "gcp_service_account" not in st.secrets:
-        return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
-
     client = get_gspread_client()
     if not client:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
@@ -221,102 +210,61 @@ def load_data_from_sheet():
                 db["turmas"][cat].append(item)
                 
         return db
-    except Exception as e:
+    except:
         return {"coordenacao": DEFAULT_COORDENACAO, "cronogramas": DEFAULT_CRONOGRAMAS, "turmas": DEFAULT_TURMAS}
 
 def save_data_to_sheet(data):
     client = get_gspread_client()
-    if not client:
-        return
+    if not client: return
     
-    sheet = client.open(SHEET_NAME).sheet1
-    
-    rows = []
-    rows.append(["ABA", "CATEGORIA", "LABEL", "LINK", "ICONE"])
-    
-    for item in data["coordenacao"]:
-        rows.append(["Coordenação", "Geral", item["label"], item["link"], item.get("icon", "")])
+    try:
+        sheet = client.open(SHEET_NAME).sheet1
+        rows = []
+        rows.append(["ABA", "CATEGORIA", "LABEL", "LINK", "ICONE"])
         
-    for cat, items in data["cronogramas"].items():
-        if not items:
-            rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
-        else:
-            for item in items:
-                rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
+        for item in data["coordenacao"]:
+            rows.append(["Coordenação", "Geral", item["label"], item["link"], item.get("icon", "")])
             
-    for cat, items in data["turmas"].items():
-        if not items:
-            rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
-        else:
-            for item in items:
-                rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
-            
-    sheet.clear()
-    sheet.update(rows)
+        for cat, items in data["cronogramas"].items():
+            if not items:
+                rows.append(["Cronogramas", cat, "__EMPTY__", "", ""])
+            else:
+                for item in items:
+                    rows.append(["Cronogramas", cat, item["label"], item["link"], ""])
+                
+        for cat, items in data["turmas"].items():
+            if not items:
+                rows.append(["Gestão de Turmas", cat, "__EMPTY__", "", ""])
+            else:
+                for item in items:
+                    rows.append(["Gestão de Turmas", cat, item["label"], item["link"], ""])
+                
+        sheet.clear()
+        sheet.update(rows)
+    except:
+        pass
 
-# --- ESTILIZAÇÃO CSS DINÂMICA (DARK/LIGHT) ---
+# --- ESTILIZAÇÃO CSS DINÂMICA ---
 st.markdown(f"""
     <style>
-    /* Aplica a cor de fundo global */
-    .stApp {{
-        background-color: {current['bg_color']};
-    }}
-    
+    .stApp {{ background-color: {current['bg_color']}; }}
     .main-header {{ text-align: center; margin-bottom: 1.5rem; }}
-    .main-header h1 {{ 
-        color: {current['title_color']}; 
-        font-weight: 800; font-size: 2.2rem; margin: 0; text-transform: uppercase; 
-    }}
-    
-    /* ABAS */
+    .main-header h1 {{ color: {current['title_color']}; font-weight: 800; font-size: 2.2rem; margin: 0; text-transform: uppercase; }}
     button[data-baseweb="tab"] {{ padding: 0.5rem 1rem !important; flex: 1; }}
-    .stTabs [data-baseweb="tab"] p {{ 
-        font-size: 20px !important; font-weight: 700 !important;
-        color: {current['text_color']} !important; 
-    }}
-    button[data-baseweb="tab"][aria-selected="true"] {{ 
-        color: {current['title_color']} !important; 
-        border-bottom-color: {current['title_color']} !important; 
-        background-color: {current['hover_bg']}; 
-    }}
-
-    /* BOTÕES: COR DO TEXTO E FUNDO DINÂMICOS */
+    .stTabs [data-baseweb="tab"] p {{ font-size: 20px !important; font-weight: 700 !important; color: {current['text_color']} !important; }}
+    button[data-baseweb="tab"][aria-selected="true"] {{ color: {current['title_color']} !important; border-bottom-color: {current['title_color']} !important; background-color: {current['hover_bg']}; }}
     div[data-testid="stLinkButton"] > a {{
         width: 100% !important; border-radius: 8px; min-height: 3.2em !important; height: auto !important; 
-        border: 1px solid {current['card_border']}; 
-        box-shadow: 0 1px 2px {current['shadow']}; 
-        background-color: {current['card_bg']};
-        color: {current['text_color']} !important; /* <--- AQUI ESTAVA O PROBLEMA ANTES */
-        text-decoration: none !important; transition: all 0.2s ease-in-out;
+        border: 1px solid {current['card_border']}; box-shadow: 0 1px 2px {current['shadow']}; background-color: {current['card_bg']};
+        color: {current['text_color']} !important; text-decoration: none !important; transition: all 0.2s ease-in-out;
         display: flex !important; align-items: center !important; justify-content: flex-start !important;
         padding: 0.4rem 12px !important; font-size: 13.5px !important; line-height: 1.25 !important; white-space: normal !important;
     }}
-    
-    div[data-testid="stLinkButton"] > a > div {{ 
-        justify-content: flex-start !important; text-align: left !important; width: 100%;
-        color: {current['text_color']} !important; /* Garante cor no elemento interno */
-    }}
-    
-    div[data-testid="stLinkButton"] > a:hover {{ 
-        border-color: {current['title_color']}; 
-        background-color: {current['hover_bg']}; 
-        transform: translateY(-1px); 
-        color: {current['title_color']} !important; 
-    }}
-    
-    div[data-testid="stLinkButton"] > a:hover > div {{
-        color: {current['title_color']} !important;
-    }}
-    
-    /* TÍTULOS DE CATEGORIA */
-    .category-title {{ 
-        color: {current['title_color']}; 
-        font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; 
-        border-bottom: 1px solid {current['card_border']}; 
-        padding-bottom: 4px; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; 
-    }}
+    div[data-testid="stLinkButton"] > a > div {{ justify-content: flex-start !important; text-align: left !important; width: 100%; color: {current['text_color']} !important; }}
+    div[data-testid="stLinkButton"] > a:hover {{ border-color: {current['title_color']}; background-color: {current['hover_bg']}; transform: translateY(-1px); color: {current['title_color']} !important; }}
+    div[data-testid="stLinkButton"] > a:hover > div {{ color: {current['title_color']} !important; }}
+    .category-title {{ color: {current['title_color']}; font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid {current['card_border']}; padding-bottom: 4px; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; }}
     .block-container {{ padding-top: 1.5rem; }}
-    
     .logo-wrapper {{ display: flex; justify-content: center; margin-bottom: 0.5rem; }}
     .logo-wrapper img {{ max-width: 260px; width: 100%; height: auto; object-fit: contain; }}
     @media (max-width: 768px) {{ .logo-wrapper img {{ max-width: 180px; }} }}
@@ -326,7 +274,7 @@ st.markdown(f"""
 # --- CARREGA DADOS ---
 db_data = load_data_from_sheet()
 
-# --- FUNÇÕES VISUAIS ---
+# --- VISUAL ---
 def render_header():
     c_left, c_center, c_right = st.columns([1, 2, 1]) 
     with c_center:
@@ -346,37 +294,32 @@ def render_cards_grid(item_list, cols=2):
             with columns[index]:
                 st.link_button(label=f"{item.get('icon', '➡️')}  {item['label']}", url=item['link'], use_container_width=True)
 
-# --- PAINEL ADMIN (SIDEBAR) ---
 def admin_sidebar():
-    # --- BOTÃO DE TEMA (VISÍVEL PARA TODOS NA SIDEBAR) ---
-    st.sidebar.markdown("### Aparência")
-    if st.sidebar.button("🌓 Mudar Tema (Claro/Escuro)", use_container_width=True):
+    st.sidebar.markdown("### 🎨 Aparência")
+    if st.sidebar.button("🌓 Alternar Tema", key="btn_toggle_theme", use_container_width=True):
         toggle_theme()
         st.rerun()
     st.sidebar.markdown("---")
-
-    # --- LOGIN ---
     st.sidebar.header("🔒 Área da Coordenação")
     
-    if "admin_password" not in st.secrets:
-        if "gcp_service_account" not in st.secrets:
-             st.sidebar.info("Modo Leitura (Secrets não configurados)")
+    if "admin_password" not in st.secrets and "gcp_service_account" not in st.secrets:
         return
 
     password = st.sidebar.text_input("Senha de Acesso", type="password")
     
-    if password == st.secrets["admin_password"]:
+    if "admin_password" in st.secrets and password == st.secrets["admin_password"]:
         st.sidebar.success("Conectado ao Banco de Dados")
         st.sidebar.markdown("---")
         
         action = st.sidebar.radio("Ação:", ["Adicionar Link", "Remover Link", "Nova Categoria", "Remover Categoria"])
-        tab_choice = st.sidebar.selectbox("Selecionar Aba:", ["Coordenação", "Cronogramas", "Gestão de Turmas"])
+        tab_choice = st.sidebar.selectbox("Selecionar Aba:", ["Gestão de Turmas", "Cronogramas", "Coordenação"]) # ORDEM ATUALIZADA AQUI PARA O ADMIN TAMBEM
         
         db_key = ""
         if tab_choice == "Coordenação": db_key = "coordenacao"
         elif tab_choice == "Cronogramas": db_key = "cronogramas"
         elif tab_choice == "Gestão de Turmas": db_key = "turmas"
         
+        # ... Lógica do Admin (Add/Remover) permanece idêntica ...
         if action == "Adicionar Link":
             with st.sidebar.form("add"):
                 label = st.text_input("Nome")
@@ -390,7 +333,7 @@ def admin_sidebar():
                     else: db_data[db_key][cat].append(item)
                     save_data_to_sheet(db_data)
                     st.rerun()
-                    
+        
         elif action == "Remover Link":
             if db_key == "coordenacao":
                 opts = [x["label"] for x in db_data[db_key]]
@@ -408,7 +351,7 @@ def admin_sidebar():
                         db_data[db_key][cat] = [x for x in db_data[db_key][cat] if x["label"] != delt]
                         save_data_to_sheet(db_data)
                         st.rerun()
-        
+
         if action == "Nova Categoria" and db_key != "coordenacao":
              new_c = st.sidebar.text_input("Nova Categoria")
              if st.sidebar.button("Criar"):
@@ -416,7 +359,7 @@ def admin_sidebar():
                      db_data[db_key][new_c] = []
                      save_data_to_sheet(db_data)
                      st.rerun()
-                     
+        
         if action == "Remover Categoria" and db_key != "coordenacao":
             del_c = st.sidebar.selectbox("Apagar Categoria", list(db_data[db_key].keys()))
             if st.sidebar.button("Apagar Tudo"):
@@ -426,24 +369,42 @@ def admin_sidebar():
 
 # --- MAIN ---
 def main():
-    # Agora o botão de tema está na função da sidebar
     admin_sidebar()
     render_header()
     
-    tab1, tab2, tab3 = st.tabs(["Coordenação Pedagógica", "Cronogramas", "Gestão de Turmas"])
+   
+    tab1, tab2, tab3 = st.tabs(["Gestão de Turmas", "Cronogramas", "Coordenação Pedagógica"])
     
+    # --- TAB 1: GESTÃO DE TURMAS (Antiga Tab 3) ---
     with tab1:
-        s1, c, s2 = st.columns([1, 3, 1])
+        s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
-            render_cards_grid(db_data["coordenacao"], cols=2)
-            
+            c1, c2, c3 = st.columns(3, gap="medium")
+            items = list(db_data["turmas"].items()) # Carrega dados de TURMAS
+            with c1:
+                for k, v in items[0::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            with c2:
+                for k, v in items[1::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            with c3:
+                for k, v in items[2::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- TAB 2: CRONOGRAMAS (Permanece no meio) ---
     with tab2:
         s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
             c1, c2, c3 = st.columns(3, gap="medium")
-            items = list(db_data["cronogramas"].items())
+            items = list(db_data["cronogramas"].items()) # Carrega dados de CRONOGRAMAS
             with c1:
                 for k, v in items[0::3]:
                     st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
@@ -460,30 +421,15 @@ def main():
                     render_cards_grid(v, cols=1)
                     st.markdown("<br>", unsafe_allow_html=True)
 
+    # --- TAB 3: COORDENAÇÃO (Antiga Tab 1) ---
     with tab3:
-        s1, c, s2 = st.columns([0.5, 10, 0.5])
+        s1, c, s2 = st.columns([1, 3, 1])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns(3, gap="medium")
-            items = list(db_data["turmas"].items())
-            with c1:
-                for k, v in items[0::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
-            with c2:
-                for k, v in items[1::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
-            with c3:
-                for k, v in items[2::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
+            render_cards_grid(db_data["coordenacao"], cols=2) # Carrega dados de COORDENAÇÃO
 
     st.markdown("---")
-    st.markdown("<div style='text-align: center; color: gray; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; color: {current['text_color']}; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
