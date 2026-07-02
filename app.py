@@ -312,7 +312,8 @@ def admin_sidebar():
         st.sidebar.markdown("---")
         
         action = st.sidebar.radio("Ação:", ["Adicionar Link", "Remover Link", "Nova Categoria", "Remover Categoria"])
-        tab_choice = st.sidebar.selectbox("Selecionar Aba:", ["Gestão de Turmas", "Cronogramas", "Coordenação"]) 
+        # ORDEM ORIGINAL RESTAURADA AQUI NO MENU
+        tab_choice = st.sidebar.selectbox("Selecionar Aba:", ["Coordenação", "Cronogramas", "Gestão de Turmas"]) 
         
         db_key = ""
         if tab_choice == "Coordenação": db_key = "coordenacao"
@@ -371,32 +372,15 @@ def main():
     admin_sidebar()
     render_header()
     
-    # === AQUI ESTÁ A ORDEM SOLICITADA ===
-    tab1, tab2, tab3 = st.tabs(["Gestão de Turmas", "Cronogramas", "Coordenação Pedagógica"])
+    # ORDEM ORIGINAL DAS ABAS RESTAURADA
+    tab1, tab2, tab3 = st.tabs(["Coordenação Pedagógica", "Cronogramas", "Gestão de Turmas"])
     
-    # --- TAB 1: GESTÃO DE TURMAS ---
+    # --- TAB 1: COORDENAÇÃO PEDAGÓGICA ---
     with tab1:
-        s1, c, s2 = st.columns([0.5, 10, 0.5])
+        s1, c, s2 = st.columns([1, 3, 1])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns(3, gap="medium")
-            # Usa os dados de 'turmas' e respeita o layout exato de colunas
-            items = list(db_data["turmas"].items()) 
-            with c1:
-                for k, v in items[0::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
-            with c2:
-                for k, v in items[1::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
-            with c3:
-                for k, v in items[2::3]:
-                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
-                    render_cards_grid(v, cols=1)
-                    st.markdown("<br>", unsafe_allow_html=True)
+            render_cards_grid(db_data["coordenacao"], cols=2) 
 
     # --- TAB 2: CRONOGRAMAS ---
     with tab2:
@@ -421,13 +405,28 @@ def main():
                     render_cards_grid(v, cols=1)
                     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- TAB 3: COORDENAÇÃO PEDAGÓGICA ---
+    # --- TAB 3: GESTÃO DE TURMAS ---
     with tab3:
-        s1, c, s2 = st.columns([1, 3, 1])
+        s1, c, s2 = st.columns([0.5, 10, 0.5])
         with c:
             st.markdown("<br>", unsafe_allow_html=True)
-            # Usa os dados de 'coordenacao' e respeita o layout exato de colunas (cols=2)
-            render_cards_grid(db_data["coordenacao"], cols=2) 
+            c1, c2, c3 = st.columns(3, gap="medium")
+            items = list(db_data["turmas"].items()) 
+            with c1:
+                for k, v in items[0::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            with c2:
+                for k, v in items[1::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            with c3:
+                for k, v in items[2::3]:
+                    st.markdown(f"<div class='category-title'>📂 {k}</div>", unsafe_allow_html=True)
+                    render_cards_grid(v, cols=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown(f"<div style='text-align: center; color: {current['text_color']}; font-size: 0.8em;'>© 2026 SENAI HUB • GeEdu Cloud v1.0</div>", unsafe_allow_html=True)
